@@ -1,10 +1,12 @@
 # Flow field using perlin noise function
 
+![flow_field](./gifs/output.gif)
+
 using compute shaders
 
-> For each particle find output of noise function
-> Use noise output to calculate a direction vector
-> move particle along direction vector
+- For each particle find output of noise function
+- Use noise output to calculate a direction vector
+- move particle along direction vector
 
 Build:
 
