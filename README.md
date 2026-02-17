@@ -16,5 +16,5 @@ Build:
   mkdir build && cd build
   cmake ..
   cmake --build .
-  cp ../src/shaders .
+  cp -r ../src/shaders .
 ```
