@@ -26,19 +26,30 @@ float hash(uint n)
     return 1.0 - float((n * (n * n * 15731u + 789221u) + 1376312589u) & 0x7fffffffu) / 1073741824.0;
 }
 
+// vec2 random2(uint id, float time)
+// {
+//     float x = hash(id);
+//     float y = hash(id + uint(time * 1000.0));
+//     return vec2(x, y);
+// }
 vec2 random2(uint id, float time)
 {
-    float x = hash(id);
-    float y = hash(id + uint(time * 1000.0));
+    uint t = uint(time * 4096.0);
+    float x = hash(id ^ t);
+    float y = hash((id + 17u) ^ (t * 31u));
     return vec2(x, y);
 }
+
 
 vec2 randomGradient(vec2 p)
 {
     p = vec2(dot(p, vec2(127.1, 311.7)),
              dot(p, vec2(269.5, 183.3)));
-    return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+
+    vec2 g = -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+    return normalize(g);
 }
+
 
 vec2 fade(vec2 t)
 {
@@ -88,24 +99,18 @@ void main()
     // guard unused threads
     if(id >= count) return;
     vec2 p = positions[id];            
-    float scale = 6.0f;
-    float n = perlin(p * scale);
-    n = n * 0.5 + 0.5;
+    float scale = 3.0f;
+    vec2 offset = vec2(time * 0.2, time * 0.173);
+    vec2 sp = p * scale + offset;
+    float n = perlin(sp);
     float angle = n * 6.283185;
     vec2 dir = vec2(cos(angle), sin(angle));
-    p += dir * dt * 0.2;
+    p += dir * dt * 0.09;
 
     // reset position if particle goes offscreen
     if (p.x > 1.0 || p.x < -1.0 || p.y > 1.0 || p.y < -1.0)
     {
-        // float seed = float(id) + time;
-
-        // float rx = fract(sin(seed * 12.9898) * 43758.5453);
-        // float ry = fract(sin(seed * 78.233)  * 43758.5453);
-
         p = random2(id, time);
-
-        // p = vec2(rx * 2.0 - 1.0, ry * 2.0 - 1.0);
     }
 
     positions[id] = p;

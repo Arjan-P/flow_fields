@@ -110,7 +110,7 @@ int main()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     // fade previous frame
     quadShader.use();
-    quadShader.setFloat("alpha", 0.09f);
+    quadShader.setFloat("alpha", 0.009f);
     glBindVertexArray(fullscreenQuadVAO);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
