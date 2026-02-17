@@ -1,0 +1,112 @@
+#version 440 core
+
+
+/*
+glDispatchCompute(G,1,1);
+=>
+for (int group = 0; group < G; group++)
+    for (int local = 0; local < 256; local++)
+        run_thread(group * 256 + local);
+*/
+
+layout (local_size_x = 256) in;
+
+// std430 is used for ssbo; binding = 0 means buffer is bound to slot 0
+layout(std430, binding = 0) buffer Particles {
+    vec2 positions[];
+};
+
+uniform float time;
+uniform float dt;
+uniform uint count;
+
+float hash(uint n)
+{
+    n = (n << 13u) ^ n;
+    return 1.0 - float((n * (n * n * 15731u + 789221u) + 1376312589u) & 0x7fffffffu) / 1073741824.0;
+}
+
+vec2 random2(uint id, float time)
+{
+    float x = hash(id);
+    float y = hash(id + uint(time * 1000.0));
+    return vec2(x, y);
+}
+
+vec2 randomGradient(vec2 p)
+{
+    p = vec2(dot(p, vec2(127.1, 311.7)),
+             dot(p, vec2(269.5, 183.3)));
+    return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+}
+
+vec2 fade(vec2 t)
+{
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+float perlin(vec2 p)
+{
+    // Grid cell coordinates
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+
+    // Gradient vectors at the 4 corners
+    vec2 g00 = randomGradient(i + vec2(0.0, 0.0));
+    vec2 g10 = randomGradient(i + vec2(1.0, 0.0));
+    vec2 g01 = randomGradient(i + vec2(0.0, 1.0));
+    vec2 g11 = randomGradient(i + vec2(1.0, 1.0));
+
+    // Distance vectors from each corner
+    vec2 d00 = f - vec2(0.0, 0.0);
+    vec2 d10 = f - vec2(1.0, 0.0);
+    vec2 d01 = f - vec2(0.0, 1.0);
+    vec2 d11 = f - vec2(1.0, 1.0);
+
+    // Dot products
+    float n00 = dot(g00, d00);
+    float n10 = dot(g10, d10);
+    float n01 = dot(g01, d01);
+    float n11 = dot(g11, d11);
+
+    // Interpolation weights
+    vec2 u = fade(f);
+
+    // Bilinear interpolation
+    float nx0 = mix(n00, n10, u.x);
+    float nx1 = mix(n01, n11, u.x);
+    float nxy = mix(nx0, nx1, u.y);
+
+    return nxy;
+}
+
+void main()
+{
+    // gl_GlobalInvocationID.x =
+    // gl_WorkGroupID.x * gl_WorkGroupSize.x + gl_LocalInvocationID.x;
+    uint id = gl_GlobalInvocationID.x;
+    // guard unused threads
+    if(id >= count) return;
+    vec2 p = positions[id];            
+    float scale = 6.0f;
+    float n = perlin(p * scale);
+    n = n * 0.5 + 0.5;
+    float angle = n * 6.283185;
+    vec2 dir = vec2(cos(angle), sin(angle));
+    p += dir * dt * 0.2;
+
+    // reset position if particle goes offscreen
+    if (p.x > 1.0 || p.x < -1.0 || p.y > 1.0 || p.y < -1.0)
+    {
+        // float seed = float(id) + time;
+
+        // float rx = fract(sin(seed * 12.9898) * 43758.5453);
+        // float ry = fract(sin(seed * 78.233)  * 43758.5453);
+
+        p = random2(id, time);
+
+        // p = vec2(rx * 2.0 - 1.0, ry * 2.0 - 1.0);
+    }
+
+    positions[id] = p;
+}
